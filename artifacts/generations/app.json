@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Generations",
+    "slug": "generations",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "generations",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {},
+    "web": {
+      "favicon": "./assets/images/icon.png",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Generations uses the microphone to record voice notes for your family room."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Generations uses your photos so you can share memories with your family room.",
+          "cameraPermission": "Generations uses the camera so you can take pictures for your family room."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "backgroundColor": "#FBF3E4",
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FBF3E4"
+    }
+  }
+}

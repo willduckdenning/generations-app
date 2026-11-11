@@ -1,0 +1,1 @@
+- [Generations product intent](generations-product.md) — family roles drive accessibility; grandparents need two large primary actions.
