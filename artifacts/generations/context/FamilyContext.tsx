@@ -17,9 +17,13 @@ export interface Message {
   durationMs?: number; createdAt: number; sample: boolean;
 }
 export interface Thread { id: string; kind: 'group' | 'direct'; memberId?: string }
-export interface Profile { name: string; role: Role; circleName: string; createdAt: number }
+export interface Profile { name: string; role: Role; circleName: string; phone: string; createdAt: number }
+export interface FamilyRoom {
+  id: string; name: string; code: string; createdAt: number;
+  members: Member[]; posts: Post[]; messages: Message[];
+}
 
-interface FamilyState { profile: Profile | null; members: Member[]; posts: Post[]; messages: Message[] }
+interface FamilyState { profile: Profile | null; familyRooms: FamilyRoom[]; activeFamilyId: string }
 
 export type NewContent = { kind: ContentKind; text?: string; uri?: string; durationMs?: number };
 
@@ -28,10 +32,18 @@ interface Ctx extends FamilyState {
   loadError: string | null;
   saveError: string | null;
   me: Member | null;
+  activeFamily: FamilyRoom | null;
   threads: Thread[];
+  familyRooms: FamilyRoom[];
   memberById: (id: string) => Member | undefined;
-  completeOnboarding: (p: { name: string; role: Role; circleName: string; withSamples: boolean }) => void;
-  updateProfile: (p: Partial<Pick<Profile, 'name' | 'role' | 'circleName'>>) => void;
+  completeOnboarding: (p: { name: string; role: Role; circleName: string; phone: string; withSamples: boolean }) => void;
+  createFamily: (name: string, withSamples: boolean) => FamilyRoom;
+  joinFamily: (code: string) => { ok: true; family: FamilyRoom } | { ok: false; reason: string };
+  setActiveFamily: (id: string) => void;
+  updateProfile: (p: Partial<Pick<Profile, 'name' | 'role' | 'circleName' | 'phone'>>) => void;
+  members: Member[];
+  posts: Post[];
+  messages: Message[];
   addPost: (c: NewContent) => void;
   deletePost: (id: string) => void;
   toggleReaction: (postId: string, key: ReactionKey) => void;
@@ -47,12 +59,15 @@ interface Ctx extends FamilyState {
 const KEY = 'generations:state:v1';
 export const ME = 'me';
 export const GROUP_THREAD = 'group';
-const empty: FamilyState = { profile: null, members: [], posts: [], messages: [] };
+const empty: FamilyState = { profile: null, familyRooms: [], activeFamilyId: '' };
 
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+const createRoomCode = () => `GEN-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 const noReactions = (): Record<ReactionKey, string[]> => ({ love: [], proud: [], laugh: [] });
 
-function buildSamples(role: Role): Pick<FamilyState, 'members' | 'posts' | 'messages'> {
+type FamilyContent = Pick<FamilyRoom, 'members' | 'posts' | 'messages'>;
+
+function buildSamples(role: Role): FamilyContent {
   const all: Member[] = [
     { id: 's-ruth', name: 'Grandma Ruth', role: 'grandparent', sample: true },
     { id: 's-dana', name: 'Dana', role: 'parent', sample: true },
@@ -90,7 +105,28 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       try {
         const raw = await AsyncStorage.getItem(KEY);
         if (!alive) return;
-        if (raw) setState({ ...empty, ...JSON.parse(raw) });
+        if (raw) {
+          const parsed = JSON.parse(raw) as Partial<FamilyState> & {
+            members?: Member[]; posts?: Post[]; messages?: Message[];
+          };
+          if (parsed.profile && !parsed.familyRooms) {
+            const legacyId = uid();
+            const legacyRoom: FamilyRoom = {
+              id: legacyId, name: parsed.profile.circleName || 'My Family', code: 'GEN-DEMO',
+              createdAt: parsed.profile.createdAt || Date.now(),
+              members: (parsed.members ?? []).map((m) => ({ ...m })),
+              posts: (parsed.posts ?? []).map((p) => ({ ...p })),
+              messages: (parsed.messages ?? []).map((m) => ({ ...m })),
+            };
+            setState({ profile: { ...parsed.profile, phone: parsed.profile.phone ?? '' }, familyRooms: [legacyRoom], activeFamilyId: legacyId });
+          } else {
+            setState({
+              ...empty, ...parsed,
+              profile: parsed.profile ? { ...parsed.profile, phone: parsed.profile.phone ?? '' } : null,
+              familyRooms: parsed.familyRooms ?? [],
+            });
+          }
+        }
         setLoadError(null);
         hydrated.current = true;
       } catch (e) {
@@ -109,42 +145,80 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       .catch((e) => setSaveError(e instanceof Error ? e.message : 'Could not save on this device.'));
   }, [state]);
 
+  const activeFamily = state.familyRooms.find((room) => room.id === state.activeFamilyId) ?? null;
+  const members = activeFamily?.members ?? [];
+  const posts = activeFamily?.posts ?? [];
+  const messages = activeFamily?.messages ?? [];
+
   const memberById = useCallback((id: string) => {
     if (id === ME && state.profile) return { id: ME, name: state.profile.name, role: state.profile.role, sample: false };
-    return state.members.find((m) => m.id === id);
-  }, [state.members, state.profile]);
+    return activeFamily?.members.find((m) => m.id === id);
+  }, [activeFamily, state.profile]);
 
   const value = useMemo<Ctx>(() => {
     const me: Member | null = state.profile ? { id: ME, name: state.profile.name, role: state.profile.role, sample: false } : null;
-    const threads: Thread[] = [{ id: GROUP_THREAD, kind: 'group' }, ...state.members.map((m) => ({ id: m.id, kind: 'direct' as const, memberId: m.id }))];
+    const threads: Thread[] = [{ id: GROUP_THREAD, kind: 'group' }, ...members.map((m) => ({ id: m.id, kind: 'direct' as const, memberId: m.id }))];
     return {
-      ...state, ready, loadError, saveError, me, threads, memberById,
-      completeOnboarding: ({ name, role, circleName, withSamples }) => {
+      ...state, ready, loadError, saveError, me, activeFamily, members, posts, messages, threads, memberById,
+      familyRooms: state.familyRooms,
+      completeOnboarding: ({ name, role, circleName, phone, withSamples }) => {
         hydrated.current = true;
-        const s = withSamples ? buildSamples(role) : { members: [], posts: [], messages: [] };
-        setState({ profile: { name, role, circleName, createdAt: Date.now() }, ...s });
+        const sampleData = withSamples ? buildSamples(role) : { members: [], posts: [], messages: [] };
+        const room: FamilyRoom = {
+          id: uid(), name: circleName, code: createRoomCode(), createdAt: Date.now(),
+          members: sampleData.members, posts: sampleData.posts, messages: sampleData.messages,
+        };
+        setState({ profile: { name, role, circleName, phone, createdAt: Date.now() }, familyRooms: [room], activeFamilyId: room.id });
       },
-      updateProfile: (p) => setState((s) => (s.profile ? { ...s, profile: { ...s.profile, ...p } } : s)),
-      addPost: (c) => setState((s) => ({ ...s, posts: [{ id: uid(), authorId: ME, ...c, createdAt: Date.now(), reactions: noReactions(), replies: [], sample: false }, ...s.posts] })),
-      deletePost: (id) => setState((s) => ({ ...s, posts: s.posts.filter((p) => !(p.id === id && p.authorId === ME)) })),
+      createFamily: (name, withSamples) => {
+        const room: FamilyRoom = { id: uid(), name, code: createRoomCode(), createdAt: Date.now(), ...(withSamples ? buildSamples(state.profile?.role ?? 'parent') : { members: [], posts: [], messages: [] }) };
+        setState((s) => ({ ...s, familyRooms: [...s.familyRooms, room], activeFamilyId: room.id, profile: s.profile ? { ...s.profile, circleName: name } : null }));
+        return room;
+      },
+      joinFamily: (input) => {
+        const code = input.trim().toUpperCase();
+        const found = state.familyRooms.find((room) => room.code.toUpperCase() === code);
+        if (found) {
+          setState((s) => ({ ...s, activeFamilyId: found.id, profile: s.profile ? { ...s.profile, circleName: found.name } : null }));
+          return { ok: true as const, family: found };
+        }
+        if (code === 'GEN-DEMO') {
+          const sampleData = buildSamples(state.profile?.role ?? 'parent');
+          const room: FamilyRoom = { id: uid(), name: 'The Demo Family', code, createdAt: Date.now(), ...sampleData };
+          setState((s) => ({ ...s, familyRooms: [...s.familyRooms, room], activeFamilyId: room.id, profile: s.profile ? { ...s.profile, circleName: room.name } : null }));
+          return { ok: true as const, family: room };
+        }
+        return { ok: false as const, reason: 'That room code is not saved on this device. Cross-device room joining is not connected yet. Try the demo code GEN-DEMO.' };
+      },
+      setActiveFamily: (id) => setState((s) => {
+        const room = s.familyRooms.find((f) => f.id === id);
+        return room ? { ...s, activeFamilyId: id, profile: s.profile ? { ...s.profile, circleName: room.name } : null } : s;
+      }),
+      updateProfile: (p) => setState((s) => {
+        if (!s.profile) return s;
+        const familyRooms = p.circleName
+          ? s.familyRooms.map((room) => room.id === s.activeFamilyId ? { ...room, name: p.circleName! } : room)
+          : s.familyRooms;
+        return { ...s, familyRooms, profile: { ...s.profile, ...p } };
+      }),
+      addPost: (c) => setState((s) => ({ ...s, familyRooms: s.familyRooms.map((r) => r.id === s.activeFamilyId ? { ...r, posts: [{ id: uid(), authorId: ME, ...c, createdAt: Date.now(), reactions: noReactions(), replies: [], sample: false }, ...r.posts] } : r) })),
+      deletePost: (id) => setState((s) => ({ ...s, familyRooms: s.familyRooms.map((r) => r.id === s.activeFamilyId ? { ...r, posts: r.posts.filter((p) => !(p.id === id && p.authorId === ME)) } : r) })),
       toggleReaction: (postId, key) => setState((s) => ({
         ...s,
-        posts: s.posts.map((p) => {
+        familyRooms: s.familyRooms.map((r) => r.id !== s.activeFamilyId ? r : ({ ...r, posts: r.posts.map((p) => {
           if (p.id !== postId) return p;
           const list = p.reactions[key] ?? [];
           return { ...p, reactions: { ...p.reactions, [key]: list.includes(ME) ? list.filter((x) => x !== ME) : [...list, ME] } };
-        }),
+        }) })),
       })),
-      addReply: (postId, text) => setState((s) => ({ ...s, posts: s.posts.map((p) => (p.id === postId ? { ...p, replies: [...p.replies, { id: uid(), authorId: ME, text, createdAt: Date.now() }] } : p)) })),
-      deleteReply: (postId, replyId) => setState((s) => ({ ...s, posts: s.posts.map((p) => (p.id === postId ? { ...p, replies: p.replies.filter((r) => !(r.id === replyId && r.authorId === ME)) } : p)) })),
-      sendMessage: (threadId, c) => setState((s) => ({ ...s, messages: [...s.messages, { id: uid(), threadId, authorId: ME, ...c, createdAt: Date.now(), sample: false }] })),
-      deleteMessage: (id) => setState((s) => ({ ...s, messages: s.messages.filter((m) => !(m.id === id && m.authorId === ME)) })),
-      removeSamples: () => setState((s) => ({
-        ...s,
-        members: [],
-        posts: s.posts.filter((p) => !p.sample).map((p) => ({ ...p, replies: p.replies.filter((r) => r.authorId === ME), reactions: { love: p.reactions.love.filter((x) => x === ME), proud: p.reactions.proud.filter((x) => x === ME), laugh: p.reactions.laugh.filter((x) => x === ME) } })),
-        messages: s.messages.filter((m) => !m.sample && (m.threadId === GROUP_THREAD)),
-      })),
+      addReply: (postId, text) => setState((s) => ({ ...s, familyRooms: s.familyRooms.map((r) => r.id !== s.activeFamilyId ? r : ({ ...r, posts: r.posts.map((p) => (p.id === postId ? { ...p, replies: [...p.replies, { id: uid(), authorId: ME, text, createdAt: Date.now() }] } : p)) })) })),
+      deleteReply: (postId, replyId) => setState((s) => ({ ...s, familyRooms: s.familyRooms.map((r) => r.id !== s.activeFamilyId ? r : ({ ...r, posts: r.posts.map((p) => (p.id === postId ? { ...p, replies: p.replies.filter((reply) => !(reply.id === replyId && reply.authorId === ME)) } : p)) })) })),
+      sendMessage: (threadId, c) => setState((s) => ({ ...s, familyRooms: s.familyRooms.map((r) => r.id === s.activeFamilyId ? { ...r, messages: [...r.messages, { id: uid(), threadId, authorId: ME, ...c, createdAt: Date.now(), sample: false }] } : r) })),
+      deleteMessage: (id) => setState((s) => ({ ...s, familyRooms: s.familyRooms.map((r) => r.id === s.activeFamilyId ? { ...r, messages: r.messages.filter((m) => !(m.id === id && m.authorId === ME)) } : r) })),
+      removeSamples: () => setState((s) => ({ ...s, familyRooms: s.familyRooms.map((r) => r.id !== s.activeFamilyId ? r : ({ ...r,
+        members: [], posts: r.posts.filter((p) => !p.sample).map((p) => ({ ...p, replies: p.replies.filter((reply) => reply.authorId === ME), reactions: { love: p.reactions.love.filter((x) => x === ME), proud: p.reactions.proud.filter((x) => x === ME), laugh: p.reactions.laugh.filter((x) => x === ME) } })),
+        messages: r.messages.filter((m) => !m.sample && m.threadId === GROUP_THREAD),
+      })) })),
       resetAll: async () => {
         await AsyncStorage.removeItem(KEY);
         setState(empty);
@@ -153,7 +227,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       },
       retryLoad: () => { setReady(false); setLoadTick((t) => t + 1); },
     };
-  }, [state, ready, loadError, saveError, memberById]);
+  }, [state, ready, loadError, saveError, memberById, activeFamily, members, posts, messages]);
 
   return <FamilyContext.Provider value={value}>{children}</FamilyContext.Provider>;
 }

@@ -14,3 +14,9 @@ The supplied website uses a giraffe wearing sunglasses as its mascot.
 **Why:** This is part of the existing product identity supplied by the user.
 
 **How to apply:** Preserve that recognizable identity when extending branding, unless the user requests a change.
+
+The intended full product uses phone-number accounts and lets members create or join a family with a room code, then text and call other members.
+
+**Why:** The user described these as final-product capabilities; current demo flows are placeholders, not production messaging or telephony.
+
+**How to apply:** Clearly distinguish prototypes from live services. For production, use real authentication and shared family membership, and add an authorized messaging/calling service rather than implying that local-only messages or simulated calls reach relatives.

@@ -44,7 +44,7 @@ function EditableField({ label, value, onSave, testID }: { label: string; value:
 
 export function SettingsView() {
   const c = useColors();
-  const { profile, me, members, messages, updateProfile, removeSamples, resetAll, saveError } = useFamily();
+  const { profile, me, members, messages, activeFamily, familyRooms, updateProfile, removeSamples, resetAll, saveError } = useFamily();
   const [resetError, setResetError] = useState<string | null>(null);
   if (!profile) return null;
 
@@ -62,7 +62,7 @@ export function SettingsView() {
         <Avatar member={me ?? undefined} size={64} />
         <View style={{ flex: 1 }}>
           <Text style={{ fontFamily: fonts.display, fontSize: 26, color: c.primaryForeground }}>{profile.name}</Text>
-          <Text style={{ fontFamily: fonts.bodySemi, fontSize: 15, color: c.goldSoft }}>{roleLabel[profile.role]} in {profile.circleName}</Text>
+          <Text style={{ fontFamily: fonts.bodySemi, fontSize: 15, color: c.goldSoft }}>{roleLabel[profile.role]} · {profile.phone || 'Demo profile'}</Text>
         </View>
         <Image source={require('@/assets/images/icon.png')} style={{ width: 44, height: 44, borderRadius: 12 }} />
       </View>
@@ -72,6 +72,16 @@ export function SettingsView() {
       <View style={[styles.section, { backgroundColor: c.card, borderColor: c.border }]}>
         <EditableField label="Your first name" value={profile.name} onSave={(v) => updateProfile({ name: v })} testID="name" />
         <EditableField label="Family circle name" value={profile.circleName} onSave={(v) => updateProfile({ circleName: v })} testID="circle" />
+      </View>
+
+      <View style={[styles.section, { backgroundColor: c.greenSoft, borderColor: c.border }]}>
+        <Text style={[styles.h, { color: c.foreground }]}>Family rooms</Text>
+        <Text style={[styles.p, { color: c.foreground }]}>
+          {familyRooms.length} room{familyRooms.length === 1 ? '' : 's'} on this device{activeFamily ? ` · Active: ${activeFamily.name} · ${activeFamily.code}` : ''}.
+        </Text>
+        <PressScale onPress={() => router.push('/family')} style={[styles.smallBtn, { backgroundColor: c.primary, alignSelf: 'flex-start' }]} testID="manage-family">
+          <Text style={{ fontFamily: fonts.bodyBlack, color: c.primaryForeground }}>Create or join family</Text>
+        </PressScale>
       </View>
 
       <View style={[styles.section, { backgroundColor: c.card, borderColor: c.border }]}>
@@ -93,7 +103,7 @@ export function SettingsView() {
         <OnDevicePill />
         <Text style={[styles.h, { color: c.foreground }]}>Where your family room lives</Text>
         <Text style={[styles.p, { color: c.foreground }]}>
-          Everything here, including posts, photos, voice notes and messages, is saved only on this device. There is no account, no sign-in and no cross-device sync yet, so nothing is sent to other family members. Deleting the app removes it all.
+          Your phone-number account, room codes, posts and messages are demo-only and saved on this device. No SMS verification, real calls or cross-device message delivery is connected. Use test numbers only.
         </Text>
         {members.length ? (
           <>

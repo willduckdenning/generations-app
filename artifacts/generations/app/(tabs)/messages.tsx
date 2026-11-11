@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Avatar, EmptyState, PressScale, SampleTag, webBottom } from '@/components/ui';
 import { fonts } from '@/constants/colors';
@@ -15,7 +15,12 @@ export default function MessagesScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <ScreenHeader eyebrow="Conversations" title="Messages" />
+      <ScreenHeader eyebrow="Conversations" title="Messages" right={
+        <Pressable onPress={() => router.push('/family')} accessibilityRole="button" accessibilityLabel="Manage family rooms" testID="open-family-rooms"
+          style={{ width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: c.greenSoft }}>
+          <Feather name="users" size={21} color={c.primary} />
+        </Pressable>
+      } />
       <FlatList
         data={threads}
         keyExtractor={(t) => t.id}

@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { OnDevicePill, PressScale, webBottom, webTop } from '@/components/ui';
 import { fonts } from '@/constants/colors';
-import { homeRouteFor, Role, useFamily } from '@/context/FamilyContext';
+import { Role, useFamily } from '@/context/FamilyContext';
 import { useColors } from '@/hooks/useColors';
 import { haptic } from '@/lib/media';
 
@@ -25,19 +25,22 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
   const [circle, setCircle] = useState('');
+  const [phone, setPhone] = useState('');
   const [role, setRole] = useState<Role | null>(null);
   const [samples, setSamples] = useState(true);
   const [touched, setTouched] = useState(false);
 
   const nameOk = name.trim().length > 0;
   const circleOk = circle.trim().length > 0;
+  const phoneDigits = phone.replace(/\D/g, '');
+  const phoneOk = /^\+?[0-9 ()-]{7,20}$/.test(phone.trim()) && phoneDigits.length >= 7 && phoneDigits.length <= 15;
 
   const finish = () => {
     setTouched(true);
-    if (!nameOk || !circleOk || !role) { haptic.warn(); return; }
+    if (!nameOk || !circleOk || !phoneOk || !role) { haptic.warn(); return; }
     haptic.success();
-    completeOnboarding({ name: name.trim(), circleName: circle.trim(), role, withSamples: samples });
-    router.replace(homeRouteFor(role));
+    completeOnboarding({ name: name.trim(), circleName: circle.trim(), phone: phone.trim(), role, withSamples: samples });
+    router.replace('/family');
   };
 
   return (
@@ -65,7 +68,7 @@ export default function Onboarding() {
             <Animated.View entering={FadeInDown.delay(560)} style={[styles.deviceCard, { backgroundColor: c.card, borderColor: c.border }]}>
               <OnDevicePill />
               <Text style={{ fontFamily: fonts.bodySemi, fontSize: 14, lineHeight: 20, color: c.foreground }}>
-                This is a device-only setup. There is no account or password. Everything you create stays on this phone, and family sync is not available yet.
+                Try the account flow with a demo phone number. No verification text will be sent, and your account and family activity stay on this device.
               </Text>
             </Animated.View>
             <PressScale onPress={() => setStep(1)} style={[styles.cta, { backgroundColor: c.primary }]} accessibilityRole="button" testID="start">
@@ -80,6 +83,14 @@ export default function Onboarding() {
               <Text style={{ fontFamily: fonts.bodyBold, color: c.primary, fontSize: 15 }}>Back</Text>
             </Pressable>
             <Text style={[styles.title, { color: c.foreground }]}>Create your place in the family.</Text>
+
+            <View style={{ gap: 8 }}>
+              <Text style={[styles.label, { color: c.foreground }]}>Phone number</Text>
+              <TextInput value={phone} onChangeText={setPhone} placeholder="Use a test number" placeholderTextColor={c.mutedForeground} keyboardType="phone-pad" returnKeyType="next" maxLength={20}
+                style={[styles.input, { backgroundColor: c.card, borderColor: touched && !phoneOk ? c.destructive : c.border, color: c.foreground }]} testID="phone-input" accessibilityLabel="Demo phone number" />
+              <Text style={{ fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: c.mutedForeground }}>Demo only: no SMS is sent, and this number is saved on this device. Use a test number, not your real number.</Text>
+              {touched && !phoneOk ? <Text style={[styles.err, { color: c.destructive }]}>Enter a valid demo number with at least 7 digits.</Text> : null}
+            </View>
 
             <View style={{ gap: 8 }}>
               <Text style={[styles.label, { color: c.foreground }]}>Your first name</Text>
@@ -125,7 +136,7 @@ export default function Onboarding() {
             </View>
 
             <PressScale onPress={finish} style={[styles.cta, { backgroundColor: c.primary }]} accessibilityRole="button" testID="finish">
-              <Text style={[styles.ctaText, { color: c.primaryForeground }]}>Open the living room</Text>
+              <Text style={[styles.ctaText, { color: c.primaryForeground }]}>Create demo account</Text>
               <Feather name="arrow-right" size={22} color={c.primaryForeground} />
             </PressScale>
           </Animated.View>

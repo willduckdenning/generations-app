@@ -37,6 +37,8 @@ function RootLayoutNav() {
       <Stack.Screen name="thread/[id]" options={{ title: '', animation: 'slide_from_right' }} />
       <Stack.Screen name="compose" options={{ presentation: 'modal', title: 'Share with family' }} />
       <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+      <Stack.Screen name="family" options={{ title: 'Family circles' }} />
+      <Stack.Screen name="call/[id]" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
     </Stack>
   );
 }

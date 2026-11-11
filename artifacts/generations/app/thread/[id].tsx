@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
@@ -57,7 +57,16 @@ export default function ThreadScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <Stack.Screen options={{ title }} />
+      <Stack.Screen options={{ title, headerRight: () => (
+        <Pressable
+          onPress={() => router.push({ pathname: '/call/[id]', params: { id: id! } })}
+          accessibilityRole="button" accessibilityLabel={`Start a demo call with ${isGroup ? 'your family' : title}`}
+          testID="start-demo-call"
+          style={{ paddingHorizontal: 12, paddingVertical: 8 }}
+        >
+          <Feather name="phone" size={20} color={c.primary} />
+        </Pressable>
+      ) }} />
       <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={0} style={{ flex: 1 }}>
         <FlatList
           data={data}
@@ -66,7 +75,7 @@ export default function ThreadScreen() {
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ padding: 16, gap: 10, flexGrow: 1 }}
-          ListEmptyComponent={<EmptyState icon="message-square" title="Say hello" body={`Start the ${isGroup ? 'family group' : 'conversation'} with a note, a photo or your voice. Saved on this device only.`} />}
+          ListEmptyComponent={<EmptyState icon="message-square" title="Say hello" body={`Start the ${isGroup ? 'family group' : 'conversation'} with a note, a photo or your voice. This is a local demo; nothing is delivered to other phones yet.`} />}
           renderItem={({ item }) => {
             const mine = item.authorId === ME;
             const author = memberById(item.authorId);
@@ -89,7 +98,7 @@ export default function ThreadScreen() {
                 </Pressable>
                 <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', marginTop: 3, marginHorizontal: 6 }}>
                   {item.sample ? <SampleTag /> : null}
-                  <Text style={{ fontFamily: fonts.body, fontSize: 11, color: c.mutedForeground }}>{mine ? 'Saved on this device · ' : ''}{timeAgo(item.createdAt)}</Text>
+                  <Text style={{ fontFamily: fonts.body, fontSize: 11, color: c.mutedForeground }}>{mine ? 'Local demo · ' : ''}{timeAgo(item.createdAt)}</Text>
                   {mine ? <Pressable onPress={() => remove(item)} hitSlop={8} accessibilityLabel="Delete message"><Feather name="trash-2" size={12} color={c.mutedForeground} /></Pressable> : null}
                 </View>
               </Animated.View>
@@ -110,7 +119,7 @@ export default function ThreadScreen() {
               <Pressable onPress={() => photo('library')} style={[styles.icon, { backgroundColor: c.goldSoft }]} accessibilityLabel="Send a photo from library" testID="thread-library">
                 <Feather name="image" size={20} color={c.secondaryForeground} />
               </Pressable>
-              <TextInput value={text} onChangeText={setText} placeholder="Message" placeholderTextColor={c.mutedForeground} multiline maxLength={1000}
+                <TextInput value={text} onChangeText={setText} placeholder="Message in this demo" placeholderTextColor={c.mutedForeground} multiline maxLength={1000}
                 style={[styles.input, { backgroundColor: c.card, borderColor: c.border, color: c.foreground }]} accessibilityLabel="Message" testID="thread-input" />
               {text.trim() ? (
                 <Pressable onPress={send} style={[styles.icon, { backgroundColor: c.primary }]} accessibilityLabel="Send message" testID="thread-send">
