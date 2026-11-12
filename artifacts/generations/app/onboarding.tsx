@@ -45,10 +45,12 @@ export default function Onboarding() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <View style={[styles.sun, { backgroundColor: c.goldSoft }]} />
+      <View pointerEvents="none" style={[styles.sun, { backgroundColor: c.goldSoft }]} />
       <KeyboardAwareScrollViewCompat
+        style={{ flex: 1 }}
         contentContainerStyle={{ paddingTop: insets.top + webTop + 24, paddingBottom: insets.bottom + webBottom + 40, paddingHorizontal: 24, flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         bottomOffset={24}
       >
         {step === 0 ? (
