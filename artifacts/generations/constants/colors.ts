@@ -38,12 +38,12 @@ const colors = {
 };
 
 export const fonts = {
-  display: 'ComicNeue_700Bold',
-  displaySemi: 'ComicNeue_700Bold',
-  body: 'ComicNeue_400Regular',
-  bodySemi: 'ComicNeue_400Regular',
-  bodyBold: 'ComicNeue_700Bold',
-  bodyBlack: 'ComicNeue_700Bold',
+  display: 'OpenSans_700Bold',
+  displaySemi: 'OpenSans_600SemiBold',
+  body: 'OpenSans_400Regular',
+  bodySemi: 'OpenSans_600SemiBold',
+  bodyBold: 'OpenSans_700Bold',
+  bodyBlack: 'OpenSans_800ExtraBold',
 };
 
 export default colors;
