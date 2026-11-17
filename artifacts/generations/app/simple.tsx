@@ -13,11 +13,12 @@ import { GROUP_THREAD, Post, useFamily } from '@/context/FamilyContext';
 import { useColors } from '@/hooks/useColors';
 import { confirmAction } from '@/lib/confirm';
 import { deleteMedia, haptic, pickPhoto } from '@/lib/media';
+import { nextReminderOccurrence } from '@/lib/reminders';
 
 export default function SimpleHome() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { profile, posts, addPost, deletePost } = useFamily();
+  const { profile, posts, reminders, addPost, deletePost } = useFamily();
   const list = useRef<FlatList<Post>>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
@@ -40,6 +41,10 @@ export default function SimpleHome() {
     list.current?.scrollToOffset({ offset: 0, animated: true });
   };
   const onDelete = (p: Post) => confirmAction('Delete this?', 'It will be removed from this device.', 'Delete', () => { deletePost(p.id); deleteMedia(p.uri); });
+  const upcomingReminder = reminders
+    .map((reminder) => ({ reminder, next: nextReminderOccurrence(reminder, new Date()) }))
+    .filter((entry) => entry.next)
+    .sort((a, b) => a.next!.getTime() - b.next!.getTime())[0];
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
@@ -69,6 +74,22 @@ export default function SimpleHome() {
           <View style={{ gap: 12 }}>
             {denied ? <PermissionNotice what="camera" canAskAgain={denied.canAskAgain} onClose={() => setDenied(null)} /> : null}
             {error ? <Notice text={error} onClose={() => setError(null)} /> : null}
+            <PressScale onPress={() => router.push('/reminders-grandparent')} style={[styles.reminderCard, { backgroundColor: c.goldSoft, borderColor: c.accent }]} accessibilityRole="button" accessibilityLabel="Open family reminders" testID="simple-reminders">
+              <View style={[styles.reminderIcon, { backgroundColor: c.primary }]}>
+                <Feather name="calendar" size={22} color={c.primaryForeground} />
+              </View>
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text style={{ fontFamily: fonts.bodyBlack, fontSize: 17, color: c.secondaryForeground }}>
+                  {upcomingReminder ? upcomingReminder.reminder.title : 'Family reminders'}
+                </Text>
+                <Text style={{ fontFamily: fonts.bodySemi, fontSize: 13, lineHeight: 18, color: c.secondaryForeground }}>
+                  {upcomingReminder
+                    ? 'Tap to see your next reminder'
+                    : 'Tap here to see or set a reminder'}
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={22} color={c.secondaryForeground} />
+            </PressScale>
           </View>
         }
         ListEmptyComponent={<EmptyState icon="image" title="Nothing here yet" body="Tap Take a Picture below to share a moment with the family." />}
@@ -76,11 +97,11 @@ export default function SimpleHome() {
       />
 
       <View style={[styles.dock, { paddingBottom: insets.bottom + webBottom + 14, backgroundColor: c.background, borderTopColor: c.border }]}>
-        <PressScale onPress={() => list.current?.scrollToOffset({ offset: 0, animated: true })} style={[styles.big, { backgroundColor: c.goldSoft }]} accessibilityRole="button" accessibilityLabel="Main Home" testID="simple-home">
+        <PressScale onPress={() => list.current?.scrollToOffset({ offset: 0, animated: true })} pressableStyle={styles.dockItem} style={[styles.big, { backgroundColor: c.goldSoft }]} accessibilityRole="button" accessibilityLabel="Main Home" testID="simple-home">
           <Feather name="home" size={34} color={c.secondaryForeground} />
           <Text style={[styles.bigText, { color: c.secondaryForeground }]}>Home</Text>
         </PressScale>
-        <PressScale onPress={takePicture} style={[styles.big, { backgroundColor: c.primary }]} accessibilityRole="button" accessibilityLabel="Take a Picture" testID="simple-camera">
+        <PressScale onPress={takePicture} pressableStyle={styles.dockItem} style={[styles.big, { backgroundColor: c.primary }]} accessibilityRole="button" accessibilityLabel="Take a Picture" testID="simple-camera">
           <Feather name="camera" size={34} color={c.accent} />
           <Text style={[styles.bigText, { color: c.primaryForeground }]}>Take a Picture</Text>
         </PressScale>
@@ -114,7 +135,10 @@ export default function SimpleHome() {
 const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingBottom: 10, gap: 12 },
   settings: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
+  reminderCard: { minHeight: 82, borderWidth: 1.5, borderRadius: 20, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  reminderIcon: { width: 46, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   dock: { position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingTop: 14, borderTopWidth: 1 },
+  dockItem: { flex: 1 },
   big: { flex: 1, minHeight: 112, borderRadius: 28, alignItems: 'center', justifyContent: 'center', gap: 8 },
   bigText: { fontFamily: fonts.bodyBlack, fontSize: 21 },
   sheet: { borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 22, gap: 16 },

@@ -20,12 +20,13 @@ export const webTop = Platform.OS === 'web' ? 67 : 0;
 export const webBottom = Platform.OS === 'web' ? 34 : 0;
 
 /* ---------- Press feedback ---------- */
-export function PressScale({ style, children, onPress, scaleTo = 0.96, ...rest }: PressableProps & { style?: StyleProp<ViewStyle>; scaleTo?: number; children: React.ReactNode }) {
+export function PressScale({ style, children, onPress, scaleTo = 0.96, pressableStyle, ...rest }: PressableProps & { style?: StyleProp<ViewStyle>; scaleTo?: number; pressableStyle?: StyleProp<ViewStyle>; children: React.ReactNode }) {
   const s = useSharedValue(1);
   const a = useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
   return (
     <Pressable
       {...rest}
+      style={pressableStyle}
       onPressIn={() => { s.value = withSpring(scaleTo, { damping: 15, stiffness: 300 }); }}
       onPressOut={() => { s.value = withSpring(1, { damping: 12, stiffness: 220 }); }}
       onPress={(e) => { haptic.tap(); onPress?.(e); }}

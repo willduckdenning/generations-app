@@ -39,6 +39,8 @@ function RootLayoutNav() {
       <Stack.Screen name="settings" options={{ title: 'Settings' }} />
       <Stack.Screen name="family" options={{ title: 'Family circles' }} />
       <Stack.Screen name="call/[id]" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
+      <Stack.Screen name="reminders-grandparent" options={{ headerShown: false, animation: 'slide_from_right' }} />
+      <Stack.Screen name="care" options={{ title: 'Private care', animation: 'slide_from_right' }} />
     </Stack>
   );
 }

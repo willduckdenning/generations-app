@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { deleteAllAppMedia } from '@/lib/media';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { BillingCycle, isBillingCycle, isPlanTier, PlanTier } from '@/constants/planTiers';
+import { BillingCycle, canUsePlanFeature, isBillingCycle, isPlanTier, PlanTier } from '@/constants/planTiers';
 
 export type Role = 'grandparent' | 'parent' | 'grandchild';
 export type ContentKind = 'text' | 'photo' | 'audio';
@@ -19,9 +19,30 @@ export interface Message {
 }
 export interface Thread { id: string; kind: 'group' | 'direct'; memberId?: string }
 export interface Profile { name: string; role: Role; circleName: string; phone: string; createdAt: number }
+export type ReminderKind = 'general' | 'duo' | 'care';
+export type CareCategory = 'Shower/Bath' | 'Hygiene' | 'Doctor' | 'Medicine' | 'Groceries' | 'Custom';
+export interface FamilyReminder {
+  id: string;
+  title: string;
+  note?: string;
+  kind: ReminderKind;
+  category?: CareCategory;
+  customCategory?: string;
+  scheduledDate: string;
+  times: string[];
+  repeatDays: number[];
+  recipientIds: string[];
+  guestIds: string[];
+  duoMemberId?: string;
+  createdAt: number;
+}
+export type NewFamilyReminder = Omit<FamilyReminder, 'id' | 'createdAt'>;
+export interface CareMessage { id: string; authorId: string; text: string; createdAt: number }
+export interface CareSpace { id: string; ownerId: string; memberIds: string[]; messages: CareMessage[] }
 export interface FamilyRoom {
   id: string; name: string; code: string; createdAt: number;
   members: Member[]; posts: Post[]; messages: Message[];
+  reminders: FamilyReminder[]; careSpace: CareSpace | null;
 }
 
 interface FamilyState {
@@ -49,10 +70,19 @@ interface Ctx extends FamilyState {
   setActiveFamily: (id: string) => void;
   setPlanTier: (tier: PlanTier) => void;
   setBillingCycle: (cycle: BillingCycle) => void;
+  addReminder: (reminder: NewFamilyReminder) => boolean;
+  updateReminder: (reminder: FamilyReminder) => boolean;
+  deleteReminder: (id: string) => void;
+  createCareSpace: (memberIds: string[]) => boolean;
+  updateCareSpaceMembers: (memberIds: string[]) => void;
+  sendCareMessage: (text: string) => boolean;
+  deleteCareMessage: (id: string) => void;
   updateProfile: (p: Partial<Pick<Profile, 'name' | 'role' | 'circleName' | 'phone'>>) => void;
   members: Member[];
   posts: Post[];
   messages: Message[];
+  reminders: FamilyReminder[];
+  careSpace: CareSpace | null;
   addPost: (c: NewContent) => void;
   deletePost: (id: string) => void;
   toggleReaction: (postId: string, key: ReactionKey) => void;
@@ -126,6 +156,8 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
               members: (parsed.members ?? []).map((m) => ({ ...m })),
               posts: (parsed.posts ?? []).map((p) => ({ ...p })),
               messages: (parsed.messages ?? []).map((m) => ({ ...m })),
+              reminders: [],
+              careSpace: null,
             };
             setState({
               profile: { ...parsed.profile, phone: parsed.profile.phone ?? '' },
@@ -138,7 +170,11 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
             setState({
               ...empty, ...parsed,
               profile: parsed.profile ? { ...parsed.profile, phone: parsed.profile.phone ?? '' } : null,
-              familyRooms: parsed.familyRooms ?? [],
+              familyRooms: (parsed.familyRooms ?? []).map((room) => ({
+                ...room,
+                reminders: room.reminders ?? [],
+                careSpace: room.careSpace ?? null,
+              })),
               planTier: isPlanTier(parsed.planTier) ? parsed.planTier : 'connect',
               billingCycle: isBillingCycle(parsed.billingCycle) ? parsed.billingCycle : 'monthly',
             });
@@ -166,6 +202,8 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const members = activeFamily?.members ?? [];
   const posts = activeFamily?.posts ?? [];
   const messages = activeFamily?.messages ?? [];
+  const reminders = activeFamily?.reminders ?? [];
+  const careSpace = activeFamily?.careSpace ?? null;
 
   const memberById = useCallback((id: string) => {
     if (id === ME && state.profile) return { id: ME, name: state.profile.name, role: state.profile.role, sample: false };
@@ -176,7 +214,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     const me: Member | null = state.profile ? { id: ME, name: state.profile.name, role: state.profile.role, sample: false } : null;
     const threads: Thread[] = [{ id: GROUP_THREAD, kind: 'group' }, ...members.map((m) => ({ id: m.id, kind: 'direct' as const, memberId: m.id }))];
     return {
-      ...state, ready, loadError, saveError, me, activeFamily, members, posts, messages, threads, memberById,
+      ...state, ready, loadError, saveError, me, activeFamily, members, posts, messages, reminders, careSpace, threads, memberById,
       familyRooms: state.familyRooms,
       completeOnboarding: ({ name, role, circleName, phone, withSamples }) => {
         hydrated.current = true;
@@ -184,6 +222,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         const room: FamilyRoom = {
           id: uid(), name: circleName, code: createRoomCode(), createdAt: Date.now(),
           members: sampleData.members, posts: sampleData.posts, messages: sampleData.messages,
+          reminders: [], careSpace: null,
         };
         setState((s) => ({
           ...empty,
@@ -195,7 +234,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         }));
       },
       createFamily: (name, withSamples) => {
-        const room: FamilyRoom = { id: uid(), name, code: createRoomCode(), createdAt: Date.now(), ...(withSamples ? buildSamples(state.profile?.role ?? 'parent') : { members: [], posts: [], messages: [] }) };
+        const room: FamilyRoom = { id: uid(), name, code: createRoomCode(), createdAt: Date.now(), ...(withSamples ? buildSamples(state.profile?.role ?? 'parent') : { members: [], posts: [], messages: [] }), reminders: [], careSpace: null };
         setState((s) => ({ ...s, familyRooms: [...s.familyRooms, room], activeFamilyId: room.id, profile: s.profile ? { ...s.profile, circleName: name } : null }));
         return room;
       },
@@ -208,7 +247,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         }
         if (code === 'GEN-DEMO') {
           const sampleData = buildSamples(state.profile?.role ?? 'parent');
-          const room: FamilyRoom = { id: uid(), name: 'The Demo Family', code, createdAt: Date.now(), ...sampleData };
+          const room: FamilyRoom = { id: uid(), name: 'The Demo Family', code, createdAt: Date.now(), ...sampleData, reminders: [], careSpace: null };
           setState((s) => ({ ...s, familyRooms: [...s.familyRooms, room], activeFamilyId: room.id, profile: s.profile ? { ...s.profile, circleName: room.name } : null }));
           return { ok: true as const, family: room };
         }
@@ -220,6 +259,102 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       }),
       setPlanTier: (planTier) => setState((s) => ({ ...s, planTier })),
       setBillingCycle: (billingCycle) => setState((s) => ({ ...s, billingCycle })),
+      addReminder: (reminder) => {
+        if (!activeFamily || !state.profile) return false;
+        if (!canUsePlanFeature(state.planTier, 'fixed-reminders')) return false;
+        if (reminder.times.length > 1 && !canUsePlanFeature(state.planTier, 'custom-reminders')) return false;
+        if (reminder.kind === 'duo' && !canUsePlanFeature(state.planTier, 'duo-call')) return false;
+        if (reminder.kind === 'care' && (state.profile.role !== 'parent' || !canUsePlanFeature(state.planTier, 'care-chat') || !activeFamily.careSpace)) return false;
+        if (reminder.kind === 'duo' && !activeFamily.members.some((member) => member.id === reminder.duoMemberId)) return false;
+        const allowedIds = new Set([ME, ...activeFamily.members.map((member) => member.id)]);
+        const cleanReminder: NewFamilyReminder = {
+          ...reminder,
+          recipientIds: [...new Set(reminder.recipientIds.filter((id) => allowedIds.has(id)))],
+          guestIds: [...new Set(reminder.guestIds.filter((id) => allowedIds.has(id) && id !== ME))],
+        };
+        setState((s) => ({
+          ...s,
+          familyRooms: s.familyRooms.map((room) => room.id === s.activeFamilyId
+            ? { ...room, reminders: [{ ...cleanReminder, id: uid(), createdAt: Date.now() }, ...room.reminders] }
+            : room),
+        }));
+        return true;
+      },
+      updateReminder: (reminder) => {
+        if (!activeFamily || !state.profile || !activeFamily.reminders.some((item) => item.id === reminder.id)) return false;
+        if (!canUsePlanFeature(state.planTier, 'fixed-reminders')) return false;
+        if (reminder.times.length > 1 && !canUsePlanFeature(state.planTier, 'custom-reminders')) return false;
+        if (reminder.kind === 'duo' && !canUsePlanFeature(state.planTier, 'duo-call')) return false;
+        if (reminder.kind === 'care' && (state.profile.role !== 'parent' || !canUsePlanFeature(state.planTier, 'care-chat') || !activeFamily.careSpace)) return false;
+        if (reminder.kind === 'duo' && !activeFamily.members.some((member) => member.id === reminder.duoMemberId)) return false;
+        const allowedIds = new Set([ME, ...activeFamily.members.map((member) => member.id)]);
+        const cleanReminder = {
+          ...reminder,
+          recipientIds: [...new Set(reminder.recipientIds.filter((id) => allowedIds.has(id)))],
+          guestIds: [...new Set(reminder.guestIds.filter((id) => allowedIds.has(id) && id !== ME))],
+        };
+        setState((s) => ({
+          ...s,
+          familyRooms: s.familyRooms.map((room) => room.id === s.activeFamilyId
+            ? { ...room, reminders: room.reminders.map((item) => item.id === cleanReminder.id ? cleanReminder : item) }
+            : room),
+        }));
+        return true;
+      },
+      deleteReminder: (id) => {
+        const target = activeFamily?.reminders.find((item) => item.id === id);
+        if (!target) return;
+        if (target.kind === 'duo' && !canUsePlanFeature(state.planTier, 'duo-call')) return;
+        if (target.kind === 'care' && (state.profile?.role !== 'parent' || !canUsePlanFeature(state.planTier, 'care-chat'))) return;
+        setState((s) => ({
+          ...s,
+          familyRooms: s.familyRooms.map((room) => room.id === s.activeFamilyId
+            ? { ...room, reminders: room.reminders.filter((item) => item.id !== id) }
+            : room),
+        }));
+      },
+      createCareSpace: (memberIds) => {
+        if (!activeFamily || state.profile?.role !== 'parent' || !canUsePlanFeature(state.planTier, 'care-chat')) return false;
+        const allowedIds = new Set(activeFamily.members.map((member) => member.id));
+        const selectedIds = [...new Set(memberIds)].filter((id) => allowedIds.has(id));
+        if (!selectedIds.length) return false;
+        setState((s) => ({
+          ...s,
+          familyRooms: s.familyRooms.map((room) => room.id === s.activeFamilyId
+            ? { ...room, careSpace: { id: uid(), ownerId: ME, memberIds: selectedIds, messages: [] } }
+            : room),
+        }));
+        return true;
+      },
+      updateCareSpaceMembers: (memberIds) => {
+        if (!activeFamily?.careSpace || state.profile?.role !== 'parent' || !canUsePlanFeature(state.planTier, 'care-chat')) return;
+        const allowedIds = new Set(activeFamily.members.map((member) => member.id));
+        const selectedIds = [...new Set(memberIds)].filter((id) => allowedIds.has(id));
+        if (!selectedIds.length) return;
+        setState((s) => ({
+          ...s,
+          familyRooms: s.familyRooms.map((room) => room.id === s.activeFamilyId && room.careSpace
+            ? { ...room, careSpace: { ...room.careSpace, memberIds: selectedIds } }
+            : room),
+        }));
+      },
+      sendCareMessage: (text) => {
+        const cleanText = text.trim();
+        if (!activeFamily?.careSpace || !cleanText || state.profile?.role !== 'parent' || !canUsePlanFeature(state.planTier, 'care-chat')) return false;
+        setState((s) => ({
+          ...s,
+          familyRooms: s.familyRooms.map((room) => room.id === s.activeFamilyId && room.careSpace
+            ? { ...room, careSpace: { ...room.careSpace, messages: [...room.careSpace.messages, { id: uid(), authorId: ME, text: cleanText, createdAt: Date.now() }] } }
+            : room),
+        }));
+        return true;
+      },
+      deleteCareMessage: (id) => setState((s) => ({
+        ...s,
+        familyRooms: s.familyRooms.map((room) => room.id === s.activeFamilyId && room.careSpace
+          ? { ...room, careSpace: { ...room.careSpace, messages: room.careSpace.messages.filter((message) => !(message.id === id && message.authorId === ME)) } }
+          : room),
+      })),
       updateProfile: (p) => setState((s) => {
         if (!s.profile) return s;
         const familyRooms = p.circleName
@@ -244,6 +379,8 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       removeSamples: () => setState((s) => ({ ...s, familyRooms: s.familyRooms.map((r) => r.id !== s.activeFamilyId ? r : ({ ...r,
         members: [], posts: r.posts.filter((p) => !p.sample).map((p) => ({ ...p, replies: p.replies.filter((reply) => reply.authorId === ME), reactions: { love: p.reactions.love.filter((x) => x === ME), proud: p.reactions.proud.filter((x) => x === ME), laugh: p.reactions.laugh.filter((x) => x === ME) } })),
         messages: r.messages.filter((m) => !m.sample && m.threadId === GROUP_THREAD),
+        reminders: r.reminders.filter((item) => item.kind !== 'duo').map((item) => ({ ...item, recipientIds: item.recipientIds.filter((id) => id === ME), guestIds: [] })),
+        careSpace: r.careSpace ? { ...r.careSpace, memberIds: [] } : null,
       })) })),
       resetAll: async () => {
         await AsyncStorage.removeItem(KEY);
@@ -253,7 +390,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       },
       retryLoad: () => { setReady(false); setLoadTick((t) => t + 1); },
     };
-  }, [state, ready, loadError, saveError, memberById, activeFamily, members, posts, messages]);
+  }, [state, ready, loadError, saveError, memberById, activeFamily, members, posts, messages, reminders, careSpace]);
 
   return <FamilyContext.Provider value={value}>{children}</FamilyContext.Provider>;
 }

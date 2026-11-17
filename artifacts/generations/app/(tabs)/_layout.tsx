@@ -24,6 +24,10 @@ function NativeTabLayout() {
         <NativeTabs.Trigger.Icon sf={{ default: 'photo.on.rectangle', selected: 'photo.fill.on.rectangle.fill' }} />
         <NativeTabs.Trigger.Label>Memories</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="reminders">
+        <NativeTabs.Trigger.Icon sf={{ default: 'calendar', selected: 'calendar' }} />
+        <NativeTabs.Trigger.Label>Reminders</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <NativeTabs.Trigger.Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} />
         <NativeTabs.Trigger.Label>Me</NativeTabs.Trigger.Label>
@@ -36,6 +40,7 @@ const tabs: { name: string; title: string; sf: string; feather: keyof typeof Fea
   { name: 'index', title: 'Home', sf: 'house', feather: 'home' },
   { name: 'messages', title: 'Messages', sf: 'bubble.left.and.bubble.right', feather: 'message-circle' },
   { name: 'photos', title: 'Memories', sf: 'photo.on.rectangle', feather: 'image' },
+  { name: 'reminders', title: 'Reminders', sf: 'calendar', feather: 'calendar' },
   { name: 'profile', title: 'Me', sf: 'person.crop.circle', feather: 'user' },
 ];
 

@@ -36,12 +36,12 @@ export interface PlanInfo {
 const connectFeatures: PlanFeatureInfo[] = [
   { name: 'Photo and message sharing (saved on this device)', status: 'demo' },
   { name: 'Birthday and anniversary reminders', status: 'preview' },
-  { name: 'Fixed reminder schedule', feature: 'fixed-reminders', status: 'preview' },
+  { name: 'Family reminders saved on this device', feature: 'fixed-reminders', status: 'demo' },
 ];
 
 const familyFeatures: PlanFeatureInfo[] = [
-  { name: 'Custom reminder times (morning/evening)', feature: 'custom-reminders', status: 'preview' },
-  { name: 'Duo call feature', feature: 'duo-call', status: 'preview' },
+  { name: 'Custom reminder times', feature: 'custom-reminders', status: 'demo' },
+  { name: 'Duo call reminder prompt (simulated)', feature: 'duo-call', status: 'demo' },
 ];
 
 export const planCatalog: Record<PlanTier, PlanInfo> = {
@@ -83,7 +83,7 @@ export const planCatalog: Record<PlanTier, PlanInfo> = {
       { name: 'Photos and voice messages appear automatically on a senior’s phone', feature: 'automatic-media', status: 'preview' },
       { name: 'Phone-call reminders for caregivers away from their phones', feature: 'caregiver-call-reminders', status: 'preview' },
       { name: 'Monthly printed photos mailed to a senior', feature: 'printed-photos', status: 'preview' },
-      { name: 'Private caregiver chat with chosen family members', feature: 'care-chat', status: 'preview' },
+      { name: 'Private caregiver chat with chosen family members (local demo)', feature: 'care-chat', status: 'demo' },
     ],
   },
 };
