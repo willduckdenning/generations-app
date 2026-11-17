@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ReminderEditor } from '@/components/ReminderEditor';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
+import { BackButton } from '@/components/BackButton';
 import { EmptyState, Notice, PressScale, webBottom } from '@/components/ui';
 import { fonts } from '@/constants/colors';
 import { canUsePlanFeature } from '@/constants/planTiers';
@@ -83,6 +84,12 @@ export function RemindersView({ grandparent = false }: { grandparent?: boolean }
       <ScreenHeader
         eyebrow={grandparent ? 'For you' : profile?.circleName}
         title={grandparent ? 'Family reminders' : 'Reminders'}
+        left={grandparent ? (
+          <BackButton
+            onPress={() => router.canGoBack() ? router.back() : router.replace('/simple')}
+            testID="grandparent-reminders-back"
+          />
+        ) : undefined}
         right={canCare ? (
           <Pressable onPress={() => router.push('/care')} accessibilityRole="button" accessibilityLabel="Open private caregiver space" testID="open-care-space"
             style={{ width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: c.terracottaSoft }}>

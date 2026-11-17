@@ -224,6 +224,9 @@ importers:
 
   artifacts/generations:
     dependencies:
+      '@expo-google-fonts/comic-neue':
+        specifier: ^0.4.1
+        version: 0.4.1
       '@expo-google-fonts/fraunces':
         specifier: ^0.4.1
         version: 0.4.1
@@ -1029,6 +1032,9 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [linux]
+
+  '@expo-google-fonts/comic-neue@0.4.1':
+    resolution: {integrity: sha512-1kYFjZeSQnGFeMnwk/B7M3p+og5eW6QZLxjMeMiZ/7TnP2IEAdYo0Gjy3XH2TpoiBHS9PAwEHaETVthVPsF09Q==}
 
   '@expo-google-fonts/fraunces@0.4.1':
     resolution: {integrity: sha512-gYc9P92ObyWvz1rWPOeWSvVKyBFIuA8hgOdhvo4DSiPBaWLbFA6v8uLIEIBwW+0oWTlXbBzjeBReHQI2H7UNjQ==}
@@ -5675,6 +5681,8 @@ snapshots:
 
   '@esbuild/linux-x64@0.28.2':
     optional: true
+
+  '@expo-google-fonts/comic-neue@0.4.1': {}
 
   '@expo-google-fonts/fraunces@0.4.1': {}
 

@@ -1,10 +1,11 @@
 import { Feather } from '@expo/vector-icons';
-import { router, Stack } from 'expo-router';
+import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar, EmptyState, Notice, PressScale, webBottom, webTop } from '@/components/ui';
+import { BackButton } from '@/components/BackButton';
 import { fonts } from '@/constants/colors';
 import { canUsePlanFeature } from '@/constants/planTiers';
 import { ME, useFamily } from '@/context/FamilyContext';
@@ -56,11 +57,8 @@ export default function CareSpaceScreen() {
 
   return (
     <View style={[styles.page, { backgroundColor: c.background }]}>
-      <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.header, { paddingTop: insets.top + webTop + 8 }]}>
-        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/reminders')} accessibilityRole="button" accessibilityLabel="Back" hitSlop={8}>
-          <Feather name="chevron-left" size={28} color={c.primary} />
-        </Pressable>
+        <BackButton onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/reminders')} testID="care-back" />
         <View style={{ flex: 1 }}>
           <Text style={{ fontFamily: fonts.bodyBlack, fontSize: 12, color: c.terracotta, letterSpacing: 0.7 }}>CARE CIRCLE</Text>
           <Text style={{ fontFamily: fonts.display, fontSize: 26, color: c.foreground }}>Private caregiver space</Text>

@@ -4,13 +4,14 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { Fraunces_600SemiBold, Fraunces_700Bold } from '@expo-google-fonts/fraunces';
-import { Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraBold, useFonts } from '@expo-google-fonts/nunito';
-import { Stack } from 'expo-router';
+import { ComicNeue_400Regular, ComicNeue_700Bold } from '@expo-google-fonts/comic-neue';
+import { useFonts } from 'expo-font';
+import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { FamilyProvider } from '@/context/FamilyContext';
+import { FamilyProvider, homeRouteFor, useFamily } from '@/context/FamilyContext';
 import colors, { fonts } from '@/constants/colors';
+import { BackButton } from '@/components/BackButton';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -18,10 +19,17 @@ const queryClient = new QueryClient();
 
 function RootLayoutNav() {
   const c = colors.light;
+  const { profile } = useFamily();
   return (
     <Stack
       screenOptions={{
-        headerBackTitle: 'Back',
+        headerLeft: ({ canGoBack }) => (
+          <BackButton
+            onPress={() => canGoBack ? router.back() : router.replace(homeRouteFor(profile?.role ?? 'parent'))}
+            label={canGoBack ? 'Back' : 'Home'}
+            testID="stack-back-button"
+          />
+        ),
         contentStyle: { backgroundColor: c.background },
         headerStyle: { backgroundColor: c.background },
         headerTintColor: c.primary,
@@ -40,19 +48,15 @@ function RootLayoutNav() {
       <Stack.Screen name="family" options={{ title: 'Family circles' }} />
       <Stack.Screen name="call/[id]" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
       <Stack.Screen name="reminders-grandparent" options={{ headerShown: false, animation: 'slide_from_right' }} />
-      <Stack.Screen name="care" options={{ title: 'Private care', animation: 'slide_from_right' }} />
+      <Stack.Screen name="care" options={{ headerShown: false, animation: 'slide_from_right' }} />
     </Stack>
   );
 }
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    Fraunces_600SemiBold,
-    Fraunces_700Bold,
-    Nunito_400Regular,
-    Nunito_600SemiBold,
-    Nunito_700Bold,
-    Nunito_800ExtraBold,
+    ComicNeue_400Regular,
+    ComicNeue_700Bold,
   });
 
   useEffect(() => {

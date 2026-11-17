@@ -38,12 +38,12 @@ const colors = {
 };
 
 export const fonts = {
-  display: 'Fraunces_700Bold',
-  displaySemi: 'Fraunces_600SemiBold',
-  body: 'Nunito_400Regular',
-  bodySemi: 'Nunito_600SemiBold',
-  bodyBold: 'Nunito_700Bold',
-  bodyBlack: 'Nunito_800ExtraBold',
+  display: 'ComicNeue_700Bold',
+  displaySemi: 'ComicNeue_700Bold',
+  body: 'ComicNeue_400Regular',
+  bodySemi: 'ComicNeue_400Regular',
+  bodyBold: 'ComicNeue_700Bold',
+  bodyBlack: 'ComicNeue_700Bold',
 };
 
 export default colors;

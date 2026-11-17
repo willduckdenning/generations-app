@@ -5,11 +5,12 @@ import { OnDevicePill, webTop } from '@/components/ui';
 import { fonts } from '@/constants/colors';
 import { useColors } from '@/hooks/useColors';
 
-export function ScreenHeader({ eyebrow, title, right }: { eyebrow?: string; title: string; right?: React.ReactNode }) {
+export function ScreenHeader({ eyebrow, title, left, right }: { eyebrow?: string; title: string; left?: React.ReactNode; right?: React.ReactNode }) {
   const c = useColors();
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.wrap, { paddingTop: insets.top + webTop + 12 }]}>
+      {left}
       <View style={{ flex: 1, gap: 4 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           {eyebrow ? <Text style={{ fontFamily: fonts.bodyBlack, fontSize: 13, letterSpacing: 0.6, color: c.terracotta }} numberOfLines={1}>{eyebrow.toUpperCase()}</Text> : null}
