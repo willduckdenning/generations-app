@@ -1,0 +1,67 @@
+name: Deploy web demo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Serve the app from /generations-app/
+        working-directory: artifacts/generations
+        run: |
+          node -e '
+            const fs = require("fs");
+            const cfg = JSON.parse(fs.readFileSync("app.json", "utf8"));
+            cfg.expo.experiments = { ...(cfg.expo.experiments || {}), baseUrl: "/generations-app" };
+            fs.writeFileSync("app.json", JSON.stringify(cfg, null, 2));
+          '
+
+      - name: Build the web version
+        working-directory: artifacts/generations
+        env:
+          CI: "1"
+          EXPO_NO_TELEMETRY: "1"
+        run: |
+          pnpm exec expo export --platform web --output-dir dist
+          touch dist/.nojekyll
+          if [ -f dist/index.html ] && [ ! -f dist/404.html ]; then cp dist/index.html dist/404.html; fi
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: artifacts/generations/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
