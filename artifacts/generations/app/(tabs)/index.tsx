@@ -1,12 +1,12 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { PhotoViewer } from '@/components/PhotoViewer';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { EmptyState, Notice, PostCard, PressScale, SkeletonFeed, webBottom } from '@/components/ui';
 import { fonts } from '@/constants/colors';
-import { ME, Post, useFamily } from '@/context/FamilyContext';
+import { GROUP_THREAD, ME, Post, useFamily } from '@/context/FamilyContext';
 import { useColors } from '@/hooks/useColors';
 import { confirmAction } from '@/lib/confirm';
 import { deleteMedia } from '@/lib/media';
@@ -21,7 +21,12 @@ export default function FeedScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <ScreenHeader eyebrow={profile?.circleName} title={greeting} />
+      <ScreenHeader eyebrow={profile?.circleName} title={greeting} right={
+        <Pressable onPress={() => router.push({ pathname: '/call/[id]', params: { id: GROUP_THREAD } })} accessibilityRole="button" accessibilityLabel="Call family" testID="home-call"
+          style={{ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: c.accent }}>
+          <Feather name="phone" size={21} color={c.accentForeground} />
+        </Pressable>
+      } />
       {!ready ? <SkeletonFeed /> : (
         <FlatList
           data={posts}

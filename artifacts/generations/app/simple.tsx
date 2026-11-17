@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PhotoViewer } from '@/components/PhotoViewer';
 import { EmptyState, Notice, OnDevicePill, PermissionNotice, PostCard, PressScale, webBottom, webTop } from '@/components/ui';
 import { fonts } from '@/constants/colors';
-import { Post, useFamily } from '@/context/FamilyContext';
+import { GROUP_THREAD, Post, useFamily } from '@/context/FamilyContext';
 import { useColors } from '@/hooks/useColors';
 import { confirmAction } from '@/lib/confirm';
 import { deleteMedia, haptic, pickPhoto } from '@/lib/media';
@@ -50,6 +50,9 @@ export default function SimpleHome() {
             <Text style={{ fontFamily: fonts.display, fontSize: 28, color: c.foreground }} numberOfLines={1}>Hello, {profile?.name}</Text>
             <Text style={{ fontFamily: fonts.bodyBold, fontSize: 17, color: c.mutedForeground }} numberOfLines={1}>{profile?.circleName}</Text>
           </View>
+          <Pressable onPress={() => router.push({ pathname: '/call/[id]', params: { id: GROUP_THREAD } })} style={[styles.settings, { backgroundColor: c.accent }]} accessibilityRole="button" accessibilityLabel="Call family" testID="simple-call">
+            <Feather name="phone" size={22} color={c.accentForeground} />
+          </Pressable>
           <Pressable onPress={() => router.push('/settings')} style={[styles.settings, { backgroundColor: c.muted }]} accessibilityRole="button" accessibilityLabel="Settings" testID="simple-settings">
             <Feather name="settings" size={22} color={c.foreground} />
           </Pressable>

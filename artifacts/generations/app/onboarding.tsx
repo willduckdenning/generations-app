@@ -54,25 +54,22 @@ export default function Onboarding() {
         bottomOffset={24}
       >
         {step === 0 ? (
-          <Animated.View key="welcome" entering={FadeIn.duration(500)} exiting={FadeOut.duration(200)} style={{ flex: 1, justifyContent: 'space-between', gap: 32 }}>
-            <View style={{ gap: 20, marginTop: 20 }}>
-              <Animated.View entering={FadeInDown.delay(100).springify()}>
+          <Animated.View key="welcome" entering={FadeIn.duration(500)} exiting={FadeOut.duration(200)} style={styles.welcome}>
+            <View style={styles.welcomeCenter}>
+              <Animated.Text entering={FadeInDown.delay(100)} style={[styles.brand, { color: c.primary }]}>Generations</Animated.Text>
+              <Animated.View entering={FadeInDown.delay(180).springify()} style={[styles.iconWrap, { backgroundColor: c.accent }]}>
                 <Image source={require('@/assets/images/icon.png')} style={styles.icon} contentFit="cover" accessibilityLabel="Generations giraffe mascot" />
               </Animated.View>
-              <Animated.Text entering={FadeInDown.delay(220)} style={[styles.brand, { color: c.primary }]}>generations</Animated.Text>
-              <Animated.Text entering={FadeInDown.delay(320)} style={[styles.hero, { color: c.foreground }]}>
-                Your family living room, in your pocket.
+              <Animated.Text entering={FadeInDown.delay(280)} style={[styles.tagline, { color: c.foreground }]}>
+                Bridge the distance,{'\n'}strengthen the bond.
               </Animated.Text>
-              <Animated.Text entering={FadeInDown.delay(420)} style={[styles.sub, { color: c.mutedForeground }]}>
-                Grandparents, parents and grandchildren, sharing little moments without the noise of social media.
-              </Animated.Text>
+              <Animated.View entering={FadeInDown.delay(360)} style={styles.demoNote}>
+                <OnDevicePill />
+                <Text style={{ fontFamily: fonts.bodySemi, fontSize: 13, lineHeight: 19, color: c.mutedForeground, textAlign: 'center' }}>
+                  Demo account · no text message will be sent
+                </Text>
+              </Animated.View>
             </View>
-            <Animated.View entering={FadeInDown.delay(560)} style={[styles.deviceCard, { backgroundColor: c.card, borderColor: c.border }]}>
-              <OnDevicePill />
-              <Text style={{ fontFamily: fonts.bodySemi, fontSize: 14, lineHeight: 20, color: c.foreground }}>
-                Try the account flow with a demo phone number. No verification text will be sent, and your account and family activity stay on this device.
-              </Text>
-            </Animated.View>
             <PressScale onPress={() => setStep(1)} style={[styles.cta, { backgroundColor: c.primary }]} accessibilityRole="button" testID="start">
               <Text style={[styles.ctaText, { color: c.primaryForeground }]}>Set up this device</Text>
               <Feather name="arrow-right" size={22} color={c.primaryForeground} />
@@ -150,12 +147,17 @@ export default function Onboarding() {
 
 const styles = StyleSheet.create({
   sun: { position: 'absolute', width: 420, height: 420, borderRadius: 210, top: -180, right: -160 },
-  icon: { width: 104, height: 104, borderRadius: 28 },
-  brand: { fontFamily: fonts.display, fontSize: 22, letterSpacing: -0.3 },
+  icon: { width: 124, height: 124, borderRadius: 32 },
+  iconWrap: { width: 144, height: 144, borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
+  welcome: { flex: 1, justifyContent: 'space-between', alignItems: 'center', paddingTop: 24, paddingBottom: 8, gap: 24 },
+  welcomeCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 22, width: '100%' },
+  demoNote: { alignItems: 'center', gap: 8, maxWidth: 300 },
+  brand: { fontFamily: fonts.bodyBlack, fontSize: 34, letterSpacing: -0.5, textAlign: 'center' },
   hero: { fontFamily: fonts.display, fontSize: 40, lineHeight: 46, letterSpacing: -1 },
+  tagline: { fontFamily: fonts.bodyBlack, fontSize: 25, lineHeight: 33, textAlign: 'center', letterSpacing: -0.2 },
   sub: { fontFamily: fonts.body, fontSize: 17, lineHeight: 25 },
   deviceCard: { borderWidth: 1, borderRadius: 20, padding: 16, gap: 10 },
-  cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, minHeight: 60, borderRadius: 999 },
+  cta: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, minHeight: 60, borderRadius: 999 },
   ctaText: { fontFamily: fonts.bodyBlack, fontSize: 18 },
   title: { fontFamily: fonts.display, fontSize: 32, lineHeight: 38, letterSpacing: -0.6 },
   label: { fontFamily: fonts.bodyBlack, fontSize: 15 },
