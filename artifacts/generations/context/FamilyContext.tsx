@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { deleteAllAppMedia } from '@/lib/media';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { BillingCycle, isBillingCycle, isPlanTier, PlanTier } from '@/constants/planTiers';
 
 export type Role = 'grandparent' | 'parent' | 'grandchild';
 export type ContentKind = 'text' | 'photo' | 'audio';
@@ -23,7 +24,13 @@ export interface FamilyRoom {
   members: Member[]; posts: Post[]; messages: Message[];
 }
 
-interface FamilyState { profile: Profile | null; familyRooms: FamilyRoom[]; activeFamilyId: string }
+interface FamilyState {
+  profile: Profile | null;
+  familyRooms: FamilyRoom[];
+  activeFamilyId: string;
+  planTier: PlanTier;
+  billingCycle: BillingCycle;
+}
 
 export type NewContent = { kind: ContentKind; text?: string; uri?: string; durationMs?: number };
 
@@ -40,6 +47,8 @@ interface Ctx extends FamilyState {
   createFamily: (name: string, withSamples: boolean) => FamilyRoom;
   joinFamily: (code: string) => { ok: true; family: FamilyRoom } | { ok: false; reason: string };
   setActiveFamily: (id: string) => void;
+  setPlanTier: (tier: PlanTier) => void;
+  setBillingCycle: (cycle: BillingCycle) => void;
   updateProfile: (p: Partial<Pick<Profile, 'name' | 'role' | 'circleName' | 'phone'>>) => void;
   members: Member[];
   posts: Post[];
@@ -59,7 +68,7 @@ interface Ctx extends FamilyState {
 const KEY = 'generations:state:v1';
 export const ME = 'me';
 export const GROUP_THREAD = 'group';
-const empty: FamilyState = { profile: null, familyRooms: [], activeFamilyId: '' };
+const empty: FamilyState = { profile: null, familyRooms: [], activeFamilyId: '', planTier: 'connect', billingCycle: 'monthly' };
 
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
 const createRoomCode = () => `GEN-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
@@ -118,12 +127,20 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
               posts: (parsed.posts ?? []).map((p) => ({ ...p })),
               messages: (parsed.messages ?? []).map((m) => ({ ...m })),
             };
-            setState({ profile: { ...parsed.profile, phone: parsed.profile.phone ?? '' }, familyRooms: [legacyRoom], activeFamilyId: legacyId });
+            setState({
+              profile: { ...parsed.profile, phone: parsed.profile.phone ?? '' },
+              familyRooms: [legacyRoom],
+              activeFamilyId: legacyId,
+              planTier: isPlanTier(parsed.planTier) ? parsed.planTier : 'connect',
+              billingCycle: isBillingCycle(parsed.billingCycle) ? parsed.billingCycle : 'monthly',
+            });
           } else {
             setState({
               ...empty, ...parsed,
               profile: parsed.profile ? { ...parsed.profile, phone: parsed.profile.phone ?? '' } : null,
               familyRooms: parsed.familyRooms ?? [],
+              planTier: isPlanTier(parsed.planTier) ? parsed.planTier : 'connect',
+              billingCycle: isBillingCycle(parsed.billingCycle) ? parsed.billingCycle : 'monthly',
             });
           }
         }
@@ -168,7 +185,14 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
           id: uid(), name: circleName, code: createRoomCode(), createdAt: Date.now(),
           members: sampleData.members, posts: sampleData.posts, messages: sampleData.messages,
         };
-        setState({ profile: { name, role, circleName, phone, createdAt: Date.now() }, familyRooms: [room], activeFamilyId: room.id });
+        setState((s) => ({
+          ...empty,
+          profile: { name, role, circleName, phone, createdAt: Date.now() },
+          familyRooms: [room],
+          activeFamilyId: room.id,
+          planTier: s.planTier,
+          billingCycle: s.billingCycle,
+        }));
       },
       createFamily: (name, withSamples) => {
         const room: FamilyRoom = { id: uid(), name, code: createRoomCode(), createdAt: Date.now(), ...(withSamples ? buildSamples(state.profile?.role ?? 'parent') : { members: [], posts: [], messages: [] }) };
@@ -194,6 +218,8 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         const room = s.familyRooms.find((f) => f.id === id);
         return room ? { ...s, activeFamilyId: id, profile: s.profile ? { ...s.profile, circleName: room.name } : null } : s;
       }),
+      setPlanTier: (planTier) => setState((s) => ({ ...s, planTier })),
+      setBillingCycle: (billingCycle) => setState((s) => ({ ...s, billingCycle })),
       updateProfile: (p) => setState((s) => {
         if (!s.profile) return s;
         const familyRooms = p.circleName

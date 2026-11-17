@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Avatar, Notice, OnDevicePill, PressScale } from '@/components/ui';
+import { PlanSelector } from '@/components/PlanSelector';
 import { fonts } from '@/constants/colors';
 import { GROUP_THREAD, ME, homeRouteFor, Role, roleLabel, useFamily } from '@/context/FamilyContext';
 import { useColors } from '@/hooks/useColors';
@@ -44,7 +45,7 @@ function EditableField({ label, value, onSave, testID }: { label: string; value:
 
 export function SettingsView() {
   const c = useColors();
-  const { profile, me, members, messages, activeFamily, familyRooms, updateProfile, removeSamples, resetAll, saveError } = useFamily();
+  const { profile, me, members, messages, activeFamily, familyRooms, planTier, billingCycle, setPlanTier, setBillingCycle, updateProfile, removeSamples, resetAll, saveError } = useFamily();
   const [resetError, setResetError] = useState<string | null>(null);
   if (!profile) return null;
 
@@ -68,6 +69,13 @@ export function SettingsView() {
       </View>
 
       {saveError ? <Notice text={`Changes may not be saved: ${saveError}`} /> : null}
+
+      <PlanSelector
+        selectedTier={planTier}
+        billingCycle={billingCycle}
+        onSelectTier={setPlanTier}
+        onSelectBillingCycle={setBillingCycle}
+      />
 
       <View style={[styles.section, { backgroundColor: c.card, borderColor: c.border }]}>
         <EditableField label="Your first name" value={profile.name} onSave={(v) => updateProfile({ name: v })} testID="name" />
